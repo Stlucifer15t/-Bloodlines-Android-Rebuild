@@ -122,7 +122,7 @@ class HudGeometryTest {
         // Inside the deadzone: no input at all (prevents drift from a resting thumb).
         assertEquals(0f to 0f, HudGeometry.stickVector(3f, 2f, metrics))
         // At full deflection: magnitude exactly 1 in the direction of travel.
-        val (fx, fy) = HudGeometry.stickVector(200f, 100f, metrics)
+        val (fx, fy) = HudGeometry.stickVector(100f, 0f, metrics)
         assertEquals(1f, fx, 0.001f)
         assertEquals(0f, fy, 0.001f)
         // Halfway: direction preserved, magnitude between 0 and 1.
@@ -141,16 +141,26 @@ class HudGeometryTest {
         assertEquals(-10f, HudGeometry.applyLookCurve(-10f, linear, density = 1f), 0.0001f)
 
         val precise = layout.copy(lookExponent = 2f, lookSensitivity = 1f)
-        // Small movements are damped, large ones amplified — that is what makes aiming possible.
-        assertTrue(HudGeometry.applyLookCurve(2f, precise, 1f) < 2f)
-        assertTrue(HudGeometry.applyLookCurve(20f, precise, 1f) > 20f)
+        val ref = HudGeometry.LOOK_REFERENCE_DP
+        // Movements shorter than the reference travel are damped (fine aiming)...
+        assertTrue(HudGeometry.applyLookCurve(6f, precise, 1f) < 6f)
+        // ...exactly at the reference the curve is the identity...
+        assertEquals(ref, HudGeometry.applyLookCurve(ref, precise, 1f), 0.001f)
+        // ...and flicks are amplified so turning stays responsive.
+        assertTrue(HudGeometry.applyLookCurve(ref * 4f, precise, 1f) > ref * 4f)
         assertEquals(0f, HudGeometry.applyLookCurve(0f, precise, 1f), 0.0001f)
 
         // Sensitivity scales the result without changing the sign.
         val fast = precise.copy(lookSensitivity = 2f)
         assertEquals(
-            HudGeometry.applyLookCurve(20f, precise, 1f) * 2f,
-            HudGeometry.applyLookCurve(20f, fast, 1f),
+            HudGeometry.applyLookCurve(60f, precise, 1f) * 2f,
+            HudGeometry.applyLookCurve(60f, fast, 1f),
+            0.0001f,
+        )
+        // Negative deltas mirror positive ones exactly.
+        assertEquals(
+            HudGeometry.applyLookCurve(60f, precise, 1f),
+            -HudGeometry.applyLookCurve(-60f, precise, 1f),
             0.0001f,
         )
     }

@@ -204,14 +204,25 @@ object HudGeometry {
         usable.inset(usable.width * 0.30f, usable.height * 0.22f)
 
     /**
-     * Normalises a raw look delta: per-density, then a power curve (fine control near the centre of
-     * finger travel, full speed on flicks), then the sensitivity multiplier.
+     * Reference finger travel for the precision curve, in dp. Movements shorter than this are
+     * damped (fine aiming); movements longer than this are amplified (fast turns). A plain power
+     * curve cannot do that: with exponent > 1 and a 1-px reference it would *amplify* every small
+     * movement, which is the opposite of what aiming needs.
+     */
+    const val LOOK_REFERENCE_DP = 24f
+
+    /**
+     * Shapes a raw look delta: relative to [LOOK_REFERENCE_DP], powered by the layout's exponent,
+     * then scaled by the sensitivity multiplier. With exponent 1 the result is exactly
+     * `deltaPx * sensitivity`, so the default of the pipeline is unchanged for players who do not
+     * touch the setting.
      */
     fun applyLookCurve(deltaPx: Float, layout: HudLayout, density: Float): Float {
         if (density <= 0f) return 0f
-        val normalised = deltaPx / density
+        val reference = LOOK_REFERENCE_DP * density
+        val normalised = deltaPx / reference
         val shaped = sign(normalised) * abs(normalised).pow(layout.lookExponent)
-        return shaped * layout.lookSensitivity
+        return shaped * reference * layout.lookSensitivity
     }
 
     /**
