@@ -1,0 +1,74 @@
+name: Android build
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build HUD module + unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # The repository does not commit a Gradle wrapper JAR (see docs/reference/build.md),
+      # so the distribution is provisioned by the action instead of ./gradlew.
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Show toolchain
+        run: |
+          java -version
+          gradle --version
+
+      - name: Unit tests
+        run: |
+          set -o pipefail
+          gradle --no-daemon --console=plain :app:testDebugUnitTest 2>&1 | tee gradle-test.log
+
+      - name: Assemble debug APK
+        if: success()
+        run: |
+          set -o pipefail
+          gradle --no-daemon --console=plain :app:assembleDebug 2>&1 | tee gradle-assemble.log
+
+      # Diagnostics that survive even when the raw job log cannot be downloaded.
+      - name: Annotate diagnostics
+        if: failure()
+        run: |
+          for f in gradle-test.log gradle-assemble.log; do
+            [ -f "$f" ] && tools/ci-annotate.sh "$f"
+          done
+          exit 0
+
+      - name: Collect reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hud-build-output
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/reports/tests/**
+            app/build/test-results/**
+            gradle-test.log
+            gradle-assemble.log
