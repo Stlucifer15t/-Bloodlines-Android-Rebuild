@@ -271,8 +271,8 @@ class HudOverlayView @JvmOverloads constructor(
             else -> withAlpha(HudPalette.BONE, min(1f, alpha + 0.1f))
         }
         val label = labels[action] ?: action.label
-        val textY = tmpRect.centerY - (labelPaint.descent() + labelPaint.ascent()) * 0.5f
-        canvas.drawText(label, tmpRect.centerX, textY, labelPaint)
+        val textY = tmpRect.centerY() - (labelPaint.descent() + labelPaint.ascent()) * 0.5f
+        canvas.drawText(label, tmpRect.centerX(), textY, labelPaint)
 
         if (isSelected) {
             strokePaint.color = HudPalette.BLOOD
