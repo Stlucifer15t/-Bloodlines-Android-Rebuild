@@ -17,6 +17,7 @@ Target device: Android 14, MediaTek Helio G85 (MT6769V/CZ), **Mali-G52 MC2**, 8 
 |---|---|
 | Investigation report | [`docs/reports/001-technical-investigation.md`](docs/reports/001-technical-investigation.md) |
 | Device evidence tool | [`tools/device-probe.sh`](tools/device-probe.sh) |
+| **How to hand the APK over** | [`docs/reference/artifact-intake.md`](docs/reference/artifact-intake.md) + [`tools/apk-intake.sh`](tools/apk-intake.sh) |
 | HUD foundation + preview/customiser | [`app/`](app/) (Assignment 004, in progress) |
 | Build notes | [`docs/reference/build.md`](docs/reference/build.md) |
 
@@ -29,9 +30,15 @@ producing a debug APK (GitHub Actions, JDK 17 / Gradle 8.9 / AGP 8.5.2 / Kotlin 
 > complete repository") and §4 could only be answered as candidate architectures plus a decision
 > procedure, never as a description of the shipped binary. See report §0.1.
 >
-> To unblock: supply the **APK** (or its `lib/arm64-v8a/` slice) and/or the port's source tree, and
-> run `tools/device-probe.sh` on the device. That closes D1–D7, after which the driver, audio and
+> To unblock: run `tools/apk-intake.sh /path/to/base.apk` on your PC and attach the resulting 1–3 MB
+> bundle here (it contains no proprietary binaries), or put the APK in a private GitHub repository and
+> name it — `git clone` works from this environment, GitHub *Releases* and Drive/Dropbox/MEGA links do
+> not (measured; see [`docs/reference/artifact-intake.md`](docs/reference/artifact-intake.md)). Then run
+> `tools/device-probe.sh` on the device. That closes D1–D7, after which the driver, audio and
 > frame-pacing work in the report's plan becomes implementable rather than speculative.
+>
+> **Runtime work is frozen until the existing implementation has been inspected.** No renderer,
+> driver, audio or input change will be proposed before that.
 
 ## What is in here
 
