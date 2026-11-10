@@ -20,6 +20,9 @@ Target device: Android 14, MediaTek Helio G85 (MT6769V/CZ), **Mali-G52 MC2**, 8 
 | HUD foundation + preview/customiser | [`app/`](app/) (Assignment 004, in progress) |
 | Build notes | [`docs/reference/build.md`](docs/reference/build.md) |
 
+Build/test status: **green** — `:app:testDebugUnitTest` 25/25 passing, `:app:assembleDebug`
+producing a debug APK (GitHub Actions, JDK 17 / Gradle 8.9 / AGP 8.5.2 / Kotlin 1.9.24).
+
 > **Blocker, stated plainly:** this repository contains one committed file (a README) before this
 > work — no port sources, no APK, no `libmain.so` / `libSDL3.so` / `libdxvk_d3d9*.so` /
 > `libd3d9_gles.so`, no build system, no prior APK research. So Assignment 001 §1 ("inspect the

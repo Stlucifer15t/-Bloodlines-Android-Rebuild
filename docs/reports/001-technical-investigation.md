@@ -517,3 +517,93 @@ adb shell dumpsys gfxinfo <pkg> > gfxinfo.txt
 6. The negotiation parameters of the SDL audio device in use (§7.2 A1).
 7. kbase UAPI version on the TECNO unit.
 8. Whether gameplay is CPU- or GPU-bound at 25 FPS (§6.2 P1–P10).
+
+---
+
+## 12. Assignment 001 wrap-up
+
+### 12.1 Files inspected
+
+| Path | Result |
+|---|---|
+| whole repository tree (`git ls-tree -r main`), all refs, `git fsck`, stashes | one file: `README.md` (30 bytes) |
+| GitHub API for the repo | `size: 0`, 1 commit, no workflows (404), no releases, no issues |
+| upstream projects (READMEs, release notes, docs), Mesa/Panfrost docs, Khronos loader docs, PCGamingWiki, DXVK issue tracker, Winlator/Gladio docs | see Appendix B |
+
+No APK, no `.so`, no exported-symbol dump and no prior research report existed to inspect. That is
+the single most important finding of this assignment (see §0.1).
+
+### 12.2 Files created
+
+| Path | Purpose |
+|---|---|
+| `docs/reports/001-technical-investigation.md` | this report |
+| `docs/README.md`, `docs/reference/build.md`, `docs/reference/runtime-profile.md` | documentation index, toolchain, evidence template |
+| `tools/device-probe.sh` | no-root adb evidence collection for D1–D7 |
+| `tools/ci-annotate.sh` | surfaces build diagnostics as a GitHub annotation (the raw job log is served from a host this environment cannot reach) |
+| `.github/workflows/android-build.yml` | unit tests + debug APK on every push |
+| `app/…` (9 Kotlin sources, 2 test suites) | HUD foundation: layout model, geometry, persistence, overlay view, preview/customiser |
+| `README.md` | rewritten project front page with the blocker and status stated plainly |
+
+### 12.3 Build and test results
+
+Verified by GitHub Actions run `42764980115` (branch `arena/09d766de-bloodlines-android-rebuild`):
+
+| Step | Result |
+|---|---|
+| `gradle :app:testDebugUnitTest` | **25 tests, 0 failures** |
+| `gradle :app:assembleDebug` | **success** (debug APK produced; artifact `hud-build-output`) |
+| toolchain | JDK 17, Gradle 8.9, AGP 8.5.2, Kotlin 1.9.24, compileSdk 34, minSdk 26 |
+
+Two earlier runs failed and were fixed rather than worked around:
+
+1. `RectF.centerX/centerY` are functions, not properties (compile error).
+2. Two failing tests, one of which exposed a genuine design flaw: a pure power curve with a 1 px
+   reference *amplifies* small look movements instead of damping them. The curve is now relative to
+   `LOOK_REFERENCE_DP = 24dp` (damped below, amplified above, exactly linear at exponent 1), and the
+   stick test's full-deflection input was corrected.
+
+The layout maths was additionally validated numerically before implementation by replicating the
+Kotlin exactly in a script and sweeping 16:9, 18:9, 19.5:9, 20:9, small-phone and tablet dp sizes,
+with and without display-cutout insets. That sweep is what caught the real unit bug in the first
+implementation (dp offsets multiplied by the compaction factor but not by density, so offsets were
+treated as pixels and every control crowded into its corner).
+
+### 12.4 What this assignment deliberately did **not** do
+
+* No changes to graphics, audio or input behaviour of the port — the port is not present.
+* No PanVK integration, no driver binaries, no quality reductions, no resolution scaling.
+* No exposure of any setting that is not implemented: the preview app's sliders control only what
+  the HUD actually implements (opacity, size, stick radius, look sensitivity/precision, haptics,
+  skip-button visibility).
+
+### 12.5 Known issues
+
+1. **Port absent** — the blocker; everything else is downstream of it.
+2. **HUD not yet embedded in the game.** `InputSink` is the seam; integration is a few lines but
+   must happen against the real input bridge, and the bridge's current mappings must be treated as
+   authoritative (report §8.3).
+3. **Extreme customisation can overlap controls.** At maximum button scale the stick ring can reach
+   the sprint button. `HudGeometry.validate` detects it and the preview app reports the count and the
+   first problem in its status line, but the editor does not yet prevent the drag. Next step: block
+   the drop, or auto-shrink.
+4. **No weapon/item selection indicator.** It needs game state (which weapon is active); the HUD has
+   no way to know yet. Designed for, not built.
+5. **Cutscene skip visibility is a manual toggle** until the runtime reports a cutscene state. The
+   skip action itself is a single stable `HudAction` waiting for the correct input binding, which
+   must be established on the device (report §8.2).
+6. **No UI screenshot tests.** CI has no device/emulator; geometry is covered by pure functions, but
+   rendering regressions would need a Robolectric or emulator stage.
+7. **Haptics are untuned** (platform constants, not measured intensities).
+
+### 12.6 Next recommended assignment
+
+**Assignment 002 — evidence capture and architecture lock-in.** Provide the APK (or its
+`lib/arm64-v8a/` slice) and/or the port source tree, then run `tools/device-probe.sh` on the TECNO.
+Fill `docs/reference/runtime-profile.md` from its output. Exit criteria: D1–D7 answered, one
+hypothesis retired, and the answer to §4.4 (does this runtime own its Vulkan loader?) recorded.
+
+If the APK cannot be shared, the recommended parallel track is **Assignment 004b — HUD completion
+against a stand-in**: finish the editor (drag prevention, per-button enable/hide UI), add the
+active-weapon indicator fed by a host-provided callback, and add an emulator screenshot test. That
+work is independent of the port and survives integration unchanged.
